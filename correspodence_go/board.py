@@ -300,8 +300,13 @@ class GoBoard:
 
         return '\n'.join(lines)
 
-    def to_unicode(self, show_coords: bool = True) -> str:
-        """Convert board to Unicode representation with nice graphics."""
+    def to_unicode(self, show_coords: bool = True, stone_style: str = 'circle') -> str:
+        """Convert board to Unicode representation with nice graphics.
+
+        Args:
+            show_coords: Whether to show coordinate labels
+            stone_style: Style of stones ('circle', 'square', 'letter')
+        """
         lines = []
 
         # Unicode characters for board drawing
@@ -318,10 +323,18 @@ class GoBoard:
         T_RIGHT = '├'
         T_LEFT = '┤'
 
-        # Stone characters (using full-width for better alignment)
-        BLACK_STONE = '⚫'
-        WHITE_STONE = '⚪'
-        STAR_POINT = '╋'
+        # Stone characters - different styles available
+        if stone_style == 'square':
+            BLACK_STONE = '■'  # Black square (U+25A0)
+            WHITE_STONE = '□'  # White square (U+25A1)
+        elif stone_style == 'letter':
+            BLACK_STONE = 'X'  # Simple X for black
+            WHITE_STONE = 'O'  # Simple O for white
+        else:  # circle (default)
+            BLACK_STONE = '●'  # Filled circle (U+25CF)
+            WHITE_STONE = '○'  # White circle (U+25CB)
+
+        STAR_POINT = '╋'   # Works well for star points
 
         # Column labels
         if show_coords:
@@ -404,8 +417,8 @@ class GoBoard:
         # Add game info with better formatting
         lines.append("")
         lines.append("─" * 40)
-        lines.append(f"⚫ Black captured: {self.captured_black}")
-        lines.append(f"⚪ White captured: {self.captured_white}")
+        lines.append(f"{BLACK_STONE} Black captured: {self.captured_black}")
+        lines.append(f"{WHITE_STONE} White captured: {self.captured_white}")
         lines.append(f"📝 Moves played: {len(self.move_history)}")
 
         if self.ko_point:
@@ -413,7 +426,7 @@ class GoBoard:
             lines.append(f"⚠️  Ko at: {ko_move.to_human_coords()}")
 
         # Show whose turn it is
-        next_player = "⚫ Black" if len(self.move_history) % 2 == 0 else "⚪ White"
+        next_player = f"{BLACK_STONE} Black" if len(self.move_history) % 2 == 0 else f"{WHITE_STONE} White"
         lines.append(f"➡️  Next to play: {next_player}")
 
         return '\n'.join(lines)

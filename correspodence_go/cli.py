@@ -61,7 +61,8 @@ def cmd_show(args: argparse.Namespace) -> None:
     print("-" * 40)
 
     if args.format == 'unicode':
-        print(board.to_unicode(show_coords=not args.no_coords))
+        stone_style = getattr(args, 'stone_style', 'circle')
+        print(board.to_unicode(show_coords=not args.no_coords, stone_style=stone_style))
     else:
         print(board.to_ascii(show_coords=not args.no_coords))
 
@@ -111,7 +112,8 @@ def cmd_move(args: argparse.Namespace) -> None:
     if args.show:
         print()
         if hasattr(args, 'format') and args.format == 'unicode':
-            print(board.to_unicode())
+            stone_style = getattr(args, 'stone_style', 'circle')
+            print(board.to_unicode(stone_style=stone_style))
         else:
             print(board.to_ascii())
 
@@ -253,6 +255,12 @@ def main():
         default='ascii',
         help='Display format (default: ascii)'
     )
+    show_parser.add_argument(
+        '--stone-style',
+        choices=['circle', 'square', 'letter'],
+        default='circle',
+        help='Stone style for unicode mode (default: circle)'
+    )
 
     # Move command
     move_parser = subparsers.add_parser('move', help='Make a move')
@@ -276,6 +284,12 @@ def main():
         choices=['ascii', 'unicode'],
         default='ascii',
         help='Display format when using --show (default: ascii)'
+    )
+    move_parser.add_argument(
+        '--stone-style',
+        choices=['circle', 'square', 'letter'],
+        default='circle',
+        help='Stone style for unicode mode (default: circle)'
     )
 
     # List games command
