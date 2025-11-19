@@ -59,7 +59,11 @@ def cmd_show(args: argparse.Namespace) -> None:
 
     print(f"\nGame: {args.name}")
     print("-" * 40)
-    print(board.to_ascii(show_coords=not args.no_coords))
+
+    if args.format == 'unicode':
+        print(board.to_unicode(show_coords=not args.no_coords))
+    else:
+        print(board.to_ascii(show_coords=not args.no_coords))
 
 
 def cmd_move(args: argparse.Namespace) -> None:
@@ -106,7 +110,10 @@ def cmd_move(args: argparse.Namespace) -> None:
     # Show board if requested
     if args.show:
         print()
-        print(board.to_ascii())
+        if hasattr(args, 'format') and args.format == 'unicode':
+            print(board.to_unicode())
+        else:
+            print(board.to_ascii())
 
 
 def cmd_list(args: argparse.Namespace) -> None:
@@ -240,6 +247,12 @@ def main():
         action='store_true',
         help='Hide coordinate labels'
     )
+    show_parser.add_argument(
+        '-f', '--format',
+        choices=['ascii', 'unicode'],
+        default='ascii',
+        help='Display format (default: ascii)'
+    )
 
     # Move command
     move_parser = subparsers.add_parser('move', help='Make a move')
@@ -257,6 +270,12 @@ def main():
         '--show',
         action='store_true',
         help='Show board after move'
+    )
+    move_parser.add_argument(
+        '-f', '--format',
+        choices=['ascii', 'unicode'],
+        default='ascii',
+        help='Display format when using --show (default: ascii)'
     )
 
     # List games command

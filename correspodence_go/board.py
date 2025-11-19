@@ -300,6 +300,124 @@ class GoBoard:
 
         return '\n'.join(lines)
 
+    def to_unicode(self, show_coords: bool = True) -> str:
+        """Convert board to Unicode representation with nice graphics."""
+        lines = []
+
+        # Unicode characters for board drawing
+        # Box drawing characters
+        TOP_LEFT = '┌'
+        TOP_RIGHT = '┐'
+        BOTTOM_LEFT = '└'
+        BOTTOM_RIGHT = '┘'
+        HORIZONTAL = '─'
+        VERTICAL = '│'
+        CROSS = '┼'
+        T_DOWN = '┬'
+        T_UP = '┴'
+        T_RIGHT = '├'
+        T_LEFT = '┤'
+
+        # Stone characters (using full-width for better alignment)
+        BLACK_STONE = '⚫'
+        WHITE_STONE = '⚪'
+        STAR_POINT = '╋'
+
+        # Column labels
+        if show_coords:
+            col_labels = "    " + "  ".join(chr(ord('A') + i) if i < 8 else chr(ord('A') + i + 1)
+                                          for i in range(self.size))
+            lines.append(col_labels)
+            lines.append("")  # Space between labels and board
+
+        # Build the board
+        for y in range(self.size):
+            row_num = self.size - y
+            board_y = self.size - 1 - y  # Flip Y for display
+
+            # Build the intersection line
+            row_chars = []
+
+            if show_coords:
+                row_chars.append(f"{row_num:2}  ")
+
+            for x in range(self.size):
+                stone = self.get(x, board_y)
+
+                # Determine what character to use
+                if stone == Stone.BLACK:
+                    char = BLACK_STONE
+                elif stone == Stone.WHITE:
+                    char = WHITE_STONE
+                else:
+                    # Empty intersection - determine the right character
+                    if self._is_star_point(x, board_y):
+                        char = STAR_POINT
+                    elif x == 0 and y == 0:
+                        char = TOP_LEFT
+                    elif x == self.size - 1 and y == 0:
+                        char = TOP_RIGHT
+                    elif x == 0 and y == self.size - 1:
+                        char = BOTTOM_LEFT
+                    elif x == self.size - 1 and y == self.size - 1:
+                        char = BOTTOM_RIGHT
+                    elif y == 0:
+                        char = T_DOWN
+                    elif y == self.size - 1:
+                        char = T_UP
+                    elif x == 0:
+                        char = T_RIGHT
+                    elif x == self.size - 1:
+                        char = T_LEFT
+                    else:
+                        char = CROSS
+
+                row_chars.append(char)
+
+                # Add horizontal line between intersections (except after last)
+                if x < self.size - 1:
+                    row_chars.append(HORIZONTAL * 2)
+
+            if show_coords:
+                row_chars.append(f"  {row_num}")
+
+            lines.append(''.join(row_chars))
+
+            # Add vertical lines between rows (except after last row)
+            if y < self.size - 1:
+                spacing_row = []
+                if show_coords:
+                    spacing_row.append("    ")
+
+                for x in range(self.size):
+                    spacing_row.append(VERTICAL)
+                    if x < self.size - 1:
+                        spacing_row.append("  ")  # Spaces between vertical lines
+
+                lines.append(''.join(spacing_row))
+
+        # Column labels again
+        if show_coords:
+            lines.append("")  # Space between board and labels
+            lines.append(col_labels)
+
+        # Add game info with better formatting
+        lines.append("")
+        lines.append("─" * 40)
+        lines.append(f"⚫ Black captured: {self.captured_black}")
+        lines.append(f"⚪ White captured: {self.captured_white}")
+        lines.append(f"📝 Moves played: {len(self.move_history)}")
+
+        if self.ko_point:
+            ko_move = Move(self.ko_point[0], self.ko_point[1], Stone.EMPTY)
+            lines.append(f"⚠️  Ko at: {ko_move.to_human_coords()}")
+
+        # Show whose turn it is
+        next_player = "⚫ Black" if len(self.move_history) % 2 == 0 else "⚪ White"
+        lines.append(f"➡️  Next to play: {next_player}")
+
+        return '\n'.join(lines)
+
     def _is_star_point(self, x: int, y: int) -> bool:
         """Check if a position is a star point (hoshi)."""
         star_points = {
