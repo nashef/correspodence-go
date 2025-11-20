@@ -58,13 +58,26 @@ class Move:
         if len(coords) < 2 or len(coords) > 3:
             raise ValueError(f"Invalid coordinates: {coords}")
 
-        col = ord(coords[0].upper()) - ord('A')
+        col_char = coords[0].upper()
+        if col_char == 'I':
+            raise ValueError("'I' is not used in Go coordinates (use A-H, J-T)")
+
+        # Adjust for skipped 'I' - J and beyond need to be shifted down by 1
+        if col_char >= 'J':
+            col = ord(col_char) - ord('A') - 1
+        else:
+            col = ord(col_char) - ord('A')
+
         row = int(coords[1:]) - 1
         return cls(col, row, color)
 
     def to_human_coords(self) -> str:
         """Convert to human-readable coordinates."""
-        col = chr(ord('A') + self.x)
+        # Skip 'I' in Go coordinates
+        if self.x < 8:
+            col = chr(ord('A') + self.x)
+        else:
+            col = chr(ord('A') + self.x + 1)  # Skip 'I'
         row = str(self.y + 1)
         return f"{col}{row}"
 
@@ -170,19 +183,24 @@ class GoBoard:
 
         return captured
 
-    def is_valid_move(self, x: int, y: int, color: Stone) -> bool:
-        """Check if a move is valid."""
+    def is_valid_move(self, x: int, y: int, color: Stone) -> tuple[bool, str]:
+        """Check if a move is valid.
+
+        Returns:
+            (is_valid, error_message) - error_message is empty string if valid
+        """
         # Check if position is on board
         if not self._is_valid_position(x, y):
-            return False
+            return False, f"Position ({x}, {y}) is outside the board"
 
         # Check if position is empty
         if self.get(x, y) != Stone.EMPTY:
-            return False
+            current_stone = "black" if self.get(x, y) == Stone.BLACK else "white"
+            return False, f"Position already occupied by {current_stone} stone"
 
         # Check ko rule
         if self.ko_point == (x, y):
-            return False
+            return False, "Move violates ko rule (immediate recapture)"
 
         # Save board state
         saved_board = [row[:] for row in self.board]
@@ -200,16 +218,20 @@ class GoBoard:
         # Restore the board completely
         self.board = saved_board
 
-        return not is_suicide
+        if is_suicide:
+            return False, "Suicide move (stone/group would have no liberties)"
 
-    def place_stone(self, x: int, y: int, color: Stone) -> bool:
+        return True, ""
+
+    def place_stone(self, x: int, y: int, color: Stone) -> tuple[bool, str]:
         """Place a stone on the board.
 
         Returns:
-            True if the move was successful, False otherwise.
+            (success, error_message) - error_message is empty string if successful
         """
-        if not self.is_valid_move(x, y, color):
-            return False
+        is_valid, error_msg = self.is_valid_move(x, y, color)
+        if not is_valid:
+            return False, error_msg
 
         # Place the stone
         self.set(x, y, color)
@@ -250,7 +272,7 @@ class GoBoard:
         move = Move(x, y, color)
         self.move_history.append(move)
 
-        return True
+        return True, ""
 
     def to_ascii(self, show_coords: bool = True, use_color: bool = True) -> str:
         """Convert board to ASCII representation."""

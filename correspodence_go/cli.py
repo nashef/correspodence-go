@@ -98,8 +98,9 @@ def cmd_move(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     # Make the move
-    if not board.place_stone(move.x, move.y, color):
-        print(f"Error: Invalid move at {args.position}", file=sys.stderr)
+    success, error_msg = board.place_stone(move.x, move.y, color)
+    if not success:
+        print(f"Error: Invalid move at {args.position} - {error_msg}", file=sys.stderr)
         sys.exit(1)
 
     save_game(args.name, board)
