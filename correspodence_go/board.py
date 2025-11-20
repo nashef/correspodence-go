@@ -252,9 +252,16 @@ class GoBoard:
 
         return True
 
-    def to_ascii(self, show_coords: bool = True) -> str:
+    def to_ascii(self, show_coords: bool = True, use_color: bool = True) -> str:
         """Convert board to ASCII representation."""
         lines = []
+
+        # ANSI codes for dimming the dots
+        if use_color:
+            DIM = '\033[2m'       # Dim text
+            RESET = '\033[0m'     # Reset to normal
+        else:
+            DIM = RESET = ''
 
         # Column labels
         if show_coords:
@@ -274,8 +281,11 @@ class GoBoard:
                 stone = self.get(x, self.size - 1 - y)  # Flip Y for display
 
                 # Add special markers for star points (hoshi)
-                if stone == Stone.EMPTY and self._is_star_point(x, self.size - 1 - y):
-                    row.append('+')
+                if stone == Stone.EMPTY:
+                    if self._is_star_point(x, self.size - 1 - y):
+                        row.append(f'{DIM}+{RESET}')
+                    else:
+                        row.append(f'{DIM}·{RESET}')
                 else:
                     row.append(str(stone))
                 row.append(' ')
@@ -297,148 +307,6 @@ class GoBoard:
         if self.ko_point:
             ko_move = Move(self.ko_point[0], self.ko_point[1], Stone.EMPTY)
             lines.append(f"Ko at: {ko_move.to_human_coords()}")
-
-        return '\n'.join(lines)
-
-    def to_unicode(self, show_coords: bool = True, stone_style: str = 'circle', use_color: bool = True) -> str:
-        """Convert board to Unicode representation with nice graphics.
-
-        Args:
-            show_coords: Whether to show coordinate labels
-            stone_style: Style of stones ('circle', 'square', 'letter')
-            use_color: Whether to use ANSI colors for better visibility
-        """
-        lines = []
-
-        # ANSI color codes
-        if use_color:
-            DIM = '\033[2m'       # Dim text for grid
-            BOLD = '\033[1m'      # Bold for stones
-            RESET = '\033[0m'     # Reset to normal
-            YELLOW = '\033[33m'   # For star points
-            BLUE = '\033[34m'     # For coordinates
-        else:
-            DIM = BOLD = RESET = YELLOW = BLUE = ''
-
-        # Unicode characters for board drawing
-        # Box drawing characters (will be dimmed)
-        TOP_LEFT = f'{DIM}┌{RESET}'
-        TOP_RIGHT = f'{DIM}┐{RESET}'
-        BOTTOM_LEFT = f'{DIM}└{RESET}'
-        BOTTOM_RIGHT = f'{DIM}┘{RESET}'
-        HORIZONTAL = f'{DIM}─{RESET}'
-        VERTICAL = f'{DIM}│{RESET}'
-        CROSS = f'{DIM}┼{RESET}'
-        T_DOWN = f'{DIM}┬{RESET}'
-        T_UP = f'{DIM}┴{RESET}'
-        T_RIGHT = f'{DIM}├{RESET}'
-        T_LEFT = f'{DIM}┤{RESET}'
-
-        # Stone characters - different styles available
-        if stone_style == 'square':
-            BLACK_STONE = f'{BOLD}■{RESET}'  # Black square (U+25A0)
-            WHITE_STONE = f'{BOLD}□{RESET}'  # White square (U+25A1)
-        elif stone_style == 'letter':
-            BLACK_STONE = f'{BOLD}X{RESET}'  # Simple X for black
-            WHITE_STONE = f'{BOLD}O{RESET}'  # Simple O for white
-        else:  # circle (default)
-            BLACK_STONE = f'{BOLD}●{RESET}'  # Filled circle (U+25CF)
-            WHITE_STONE = f'{BOLD}○{RESET}'  # White circle (U+25CB)
-
-        STAR_POINT = f'{YELLOW}╋{RESET}'   # Star points in yellow for visibility
-
-        # Column labels
-        if show_coords:
-            col_labels = "    " + "  ".join(f"{BLUE}{chr(ord('A') + i) if i < 8 else chr(ord('A') + i + 1)}{RESET}"
-                                          for i in range(self.size))
-            lines.append(col_labels)
-            lines.append("")  # Space between labels and board
-
-        # Build the board
-        for y in range(self.size):
-            row_num = self.size - y
-            board_y = self.size - 1 - y  # Flip Y for display
-
-            # Build the intersection line
-            row_chars = []
-
-            if show_coords:
-                row_chars.append(f"{BLUE}{row_num:2}{RESET}  ")
-
-            for x in range(self.size):
-                stone = self.get(x, board_y)
-
-                # Determine what character to use
-                if stone == Stone.BLACK:
-                    char = BLACK_STONE
-                elif stone == Stone.WHITE:
-                    char = WHITE_STONE
-                else:
-                    # Empty intersection - determine the right character
-                    if self._is_star_point(x, board_y):
-                        char = STAR_POINT
-                    elif x == 0 and y == 0:
-                        char = TOP_LEFT
-                    elif x == self.size - 1 and y == 0:
-                        char = TOP_RIGHT
-                    elif x == 0 and y == self.size - 1:
-                        char = BOTTOM_LEFT
-                    elif x == self.size - 1 and y == self.size - 1:
-                        char = BOTTOM_RIGHT
-                    elif y == 0:
-                        char = T_DOWN
-                    elif y == self.size - 1:
-                        char = T_UP
-                    elif x == 0:
-                        char = T_RIGHT
-                    elif x == self.size - 1:
-                        char = T_LEFT
-                    else:
-                        char = CROSS
-
-                row_chars.append(char)
-
-                # Add horizontal line between intersections (except after last)
-                if x < self.size - 1:
-                    row_chars.append(HORIZONTAL + HORIZONTAL)
-
-            if show_coords:
-                row_chars.append(f"  {BLUE}{row_num}{RESET}")
-
-            lines.append(''.join(row_chars))
-
-            # Add vertical lines between rows (except after last row)
-            if y < self.size - 1:
-                spacing_row = []
-                if show_coords:
-                    spacing_row.append("    ")
-
-                for x in range(self.size):
-                    spacing_row.append(VERTICAL)
-                    if x < self.size - 1:
-                        spacing_row.append("  ")  # Spaces between vertical lines
-
-                lines.append(''.join(spacing_row))
-
-        # Column labels again
-        if show_coords:
-            lines.append("")  # Space between board and labels
-            lines.append(col_labels)
-
-        # Add game info with better formatting
-        lines.append("")
-        lines.append("─" * 40)
-        lines.append(f"{BLACK_STONE} Black captured: {self.captured_black}")
-        lines.append(f"{WHITE_STONE} White captured: {self.captured_white}")
-        lines.append(f"📝 Moves played: {len(self.move_history)}")
-
-        if self.ko_point:
-            ko_move = Move(self.ko_point[0], self.ko_point[1], Stone.EMPTY)
-            lines.append(f"⚠️  Ko at: {ko_move.to_human_coords()}")
-
-        # Show whose turn it is
-        next_player = f"{BLACK_STONE} Black" if len(self.move_history) % 2 == 0 else f"{WHITE_STONE} White"
-        lines.append(f"➡️  Next to play: {next_player}")
 
         return '\n'.join(lines)
 

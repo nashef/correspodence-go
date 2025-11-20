@@ -8,7 +8,6 @@ from typing import Optional
 import argparse
 
 from .board import GoBoard, Stone, Move
-from .image_renderer import BoardImageRenderer
 
 
 DEFAULT_GAME_DIR = Path.home() / '.correspodence-go' / 'games'
@@ -61,31 +60,8 @@ def cmd_show(args: argparse.Namespace) -> None:
     print(f"\nGame: {args.name}")
     print("-" * 40)
 
-    if args.format == 'image':
-        # Render as image
-        renderer = BoardImageRenderer(board.size)
-
-        if args.image_format == 'sixel':
-            print(renderer.to_sixel(board, show_coords=not args.no_coords))
-        elif args.image_format == 'iterm2':
-            print(renderer.to_iterm2(board, show_coords=not args.no_coords))
-        elif args.image_format == 'kitty':
-            print(renderer.to_kitty(board, show_coords=not args.no_coords))
-        elif args.image_format == 'ascii':
-            print(renderer.to_ascii_art(board, show_coords=not args.no_coords))
-        elif args.image_format == 'file':
-            output_file = getattr(args, 'output', f"{args.name}.png")
-            renderer.save_image(board, output_file, show_coords=not args.no_coords)
-            print(f"Board saved to: {output_file}")
-        else:
-            print(f"Unknown image format: {args.image_format}", file=sys.stderr)
-            sys.exit(1)
-    elif args.format == 'unicode':
-        stone_style = getattr(args, 'stone_style', 'circle')
-        use_color = not getattr(args, 'no_color', False)
-        print(board.to_unicode(show_coords=not args.no_coords, stone_style=stone_style, use_color=use_color))
-    else:
-        print(board.to_ascii(show_coords=not args.no_coords))
+    use_color = not getattr(args, 'no_color', False)
+    print(board.to_ascii(show_coords=not args.no_coords, use_color=use_color))
 
 
 def cmd_move(args: argparse.Namespace) -> None:
@@ -132,29 +108,8 @@ def cmd_move(args: argparse.Namespace) -> None:
     # Show board if requested
     if args.show:
         print()
-        if hasattr(args, 'format'):
-            if args.format == 'image':
-                renderer = BoardImageRenderer(board.size)
-                image_format = getattr(args, 'image_format', 'ascii')
-
-                if image_format == 'sixel':
-                    print(renderer.to_sixel(board))
-                elif image_format == 'iterm2':
-                    print(renderer.to_iterm2(board))
-                elif image_format == 'kitty':
-                    print(renderer.to_kitty(board))
-                elif image_format == 'ascii':
-                    print(renderer.to_ascii_art(board))
-                else:
-                    print(renderer.to_ascii_art(board))
-            elif args.format == 'unicode':
-                stone_style = getattr(args, 'stone_style', 'circle')
-                use_color = not getattr(args, 'no_color', False)
-                print(board.to_unicode(stone_style=stone_style, use_color=use_color))
-            else:
-                print(board.to_ascii())
-        else:
-            print(board.to_ascii())
+        use_color = not getattr(args, 'no_color', False)
+        print(board.to_ascii(use_color=use_color))
 
 
 def cmd_list(args: argparse.Namespace) -> None:
@@ -289,31 +244,9 @@ def main():
         help='Hide coordinate labels'
     )
     show_parser.add_argument(
-        '-f', '--format',
-        choices=['ascii', 'unicode', 'image'],
-        default='ascii',
-        help='Display format (default: ascii)'
-    )
-    show_parser.add_argument(
-        '--stone-style',
-        choices=['circle', 'square', 'letter'],
-        default='circle',
-        help='Stone style for unicode mode (default: circle)'
-    )
-    show_parser.add_argument(
         '--no-color',
         action='store_true',
-        help='Disable colors in unicode mode'
-    )
-    show_parser.add_argument(
-        '--image-format',
-        choices=['sixel', 'iterm2', 'kitty', 'ascii', 'file'],
-        default='ascii',
-        help='Image output format (default: ascii)'
-    )
-    show_parser.add_argument(
-        '-o', '--output',
-        help='Output filename for image format=file'
+        help='Disable dimmed dots (for terminals without ANSI support)'
     )
 
     # Move command
@@ -334,27 +267,9 @@ def main():
         help='Show board after move'
     )
     move_parser.add_argument(
-        '-f', '--format',
-        choices=['ascii', 'unicode', 'image'],
-        default='ascii',
-        help='Display format when using --show (default: ascii)'
-    )
-    move_parser.add_argument(
-        '--stone-style',
-        choices=['circle', 'square', 'letter'],
-        default='circle',
-        help='Stone style for unicode mode (default: circle)'
-    )
-    move_parser.add_argument(
         '--no-color',
         action='store_true',
-        help='Disable colors in unicode mode'
-    )
-    move_parser.add_argument(
-        '--image-format',
-        choices=['sixel', 'iterm2', 'kitty', 'ascii', 'file'],
-        default='ascii',
-        help='Image output format (default: ascii)'
+        help='Disable dimmed dots (for terminals without ANSI support)'
     )
 
     # List games command
