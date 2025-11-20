@@ -23,9 +23,9 @@ class Stone(Enum):
     def __str__(self) -> str:
         """String representation for display."""
         if self == Stone.BLACK:
-            return '●'
+            return '○'  # Empty circle for black
         elif self == Stone.WHITE:
-            return '○'
+            return '●'  # Filled circle for white
         return '·'
 
 
@@ -341,6 +341,35 @@ class GoBoard:
                  (3, 15), (9, 15), (15, 15)]
         }
         return (x, y) in star_points.get(self.size, [])
+
+    def undo_last_move(self) -> bool:
+        """Remove the last move and restore the board state.
+
+        Returns:
+            True if a move was undone, False if there are no moves to undo.
+        """
+        if not self.move_history:
+            return False
+
+        # Remove the last move
+        self.move_history.pop()
+
+        # Rebuild the board from scratch by replaying all remaining moves
+        # This ensures captures and ko state are correctly restored
+        temp_board = GoBoard(self.size)
+
+        for move in self.move_history:
+            # Skip pass moves (marked with -1, -1)
+            if move.x >= 0 and move.y >= 0:
+                temp_board.place_stone(move.x, move.y, move.color)
+
+        # Copy the rebuilt state back
+        self.board = temp_board.board
+        self.captured_black = temp_board.captured_black
+        self.captured_white = temp_board.captured_white
+        self.ko_point = temp_board.ko_point
+
+        return True
 
     def save_to_dict(self) -> dict:
         """Save board state to a dictionary."""

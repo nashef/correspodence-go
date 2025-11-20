@@ -57,7 +57,23 @@ def cmd_show(args: argparse.Namespace) -> None:
         print(f"Error: Game '{args.name}' not found.", file=sys.stderr)
         sys.exit(1)
 
-    print(f"\nGame: {args.name}")
+    # If --move is specified, rebuild board up to that move
+    if args.move is not None:
+        if args.move < 0 or args.move > len(board.move_history):
+            print(f"Error: Move {args.move} out of range (0-{len(board.move_history)})", file=sys.stderr)
+            sys.exit(1)
+
+        # Create a fresh board and replay moves up to the specified point
+        temp_board = GoBoard(board.size)
+        for i in range(args.move):
+            move = board.move_history[i]
+            if move.x >= 0 and move.y >= 0:  # Skip passes
+                temp_board.place_stone(move.x, move.y, move.color)
+        board = temp_board
+        print(f"\nGame: {args.name} (at move {args.move})")
+    else:
+        print(f"\nGame: {args.name}")
+
     print("-" * 40)
 
     use_color = not getattr(args, 'no_color', False)
@@ -179,6 +195,68 @@ def cmd_history(args: argparse.Namespace) -> None:
             print(f"{move_num:3}. {color:5} {coords}")
 
 
+def cmd_moves(args: argparse.Namespace) -> None:
+    """Print all moves in order (compact format)."""
+    board = load_game(args.name)
+    if not board:
+        print(f"Error: Game '{args.name}' not found.", file=sys.stderr)
+        sys.exit(1)
+
+    if not board.move_history:
+        print("No moves played yet.")
+        return
+
+    moves_list = []
+    for i, move in enumerate(board.move_history):
+        if move.x == -1 and move.y == -1:
+            moves_list.append("pass")
+        else:
+            moves_list.append(move.to_human_coords())
+
+    # Print moves in a compact format
+    if args.one_per_line:
+        for i, move_str in enumerate(moves_list):
+            print(f"{i+1}. {move_str}")
+    else:
+        print(" ".join(moves_list))
+
+
+def cmd_undo(args: argparse.Namespace) -> None:
+    """Undo the last move in a game."""
+    board = load_game(args.name)
+    if not board:
+        print(f"Error: Game '{args.name}' not found.", file=sys.stderr)
+        sys.exit(1)
+
+    if not board.move_history:
+        print(f"Error: No moves to undo in game '{args.name}'.", file=sys.stderr)
+        sys.exit(1)
+
+    # Get the last move for display
+    last_move = board.move_history[-1]
+    if last_move.x == -1 and last_move.y == -1:
+        move_desc = "pass"
+    else:
+        move_desc = last_move.to_human_coords()
+
+    move_num = len(board.move_history)
+    color = "Black" if (move_num - 1) % 2 == 0 else "White"
+
+    # Undo the move
+    if board.undo_last_move():
+        save_game(args.name, board)
+        print(f"Undone: Move {move_num} - {color} {move_desc}")
+
+        # Show board if requested
+        if args.show:
+            print()
+            use_color = not getattr(args, 'no_color', False)
+            print(board.to_ascii(use_color=use_color))
+    else:
+        print(f"Error: Failed to undo move.", file=sys.stderr)
+        sys.exit(1)
+
+
 def cmd_export(args: argparse.Namespace) -> None:
     """Export game to SGF format."""
     board = load_game(args.name)
@@ -249,6 +327,11 @@ def main():
         action='store_true',
         help='Disable dimmed dots (for terminals without ANSI support)'
     )
+    show_parser.add_argument(
+        '--move',
+        type=int,
+        help='Show board at a specific move number (0 for empty board)'
+    )
 
     # Move command
     move_parser = subparsers.add_parser('move', help='Make a move')
@@ -289,6 +372,29 @@ def main():
     history_parser = subparsers.add_parser('history', help='Show move history')
     history_parser.add_argument('name', help='Game name')
 
+    # Moves command
+    moves_parser = subparsers.add_parser('moves', help='Print all moves in order')
+    moves_parser.add_argument('name', help='Game name')
+    moves_parser.add_argument(
+        '-l', '--one-per-line',
+        action='store_true',
+        help='Print one move per line with numbers'
+    )
+
+    # Undo command
+    undo_parser = subparsers.add_parser('undo', help='Undo the last move')
+    undo_parser.add_argument('name', help='Game name')
+    undo_parser.add_argument(
+        '--show',
+        action='store_true',
+        help='Show board after undo'
+    )
+    undo_parser.add_argument(
+        '--no-color',
+        action='store_true',
+        help='Disable dimmed dots (for terminals without ANSI support)'
+    )
+
     # Export command
     export_parser = subparsers.add_parser('export', help='Export game to SGF')
     export_parser.add_argument('name', help='Game name')
@@ -312,6 +418,8 @@ def main():
         'list': cmd_list,
         'delete': cmd_delete,
         'history': cmd_history,
+        'moves': cmd_moves,
+        'undo': cmd_undo,
         'export': cmd_export,
     }
 
