@@ -300,45 +300,56 @@ class GoBoard:
 
         return '\n'.join(lines)
 
-    def to_unicode(self, show_coords: bool = True, stone_style: str = 'circle') -> str:
+    def to_unicode(self, show_coords: bool = True, stone_style: str = 'circle', use_color: bool = True) -> str:
         """Convert board to Unicode representation with nice graphics.
 
         Args:
             show_coords: Whether to show coordinate labels
             stone_style: Style of stones ('circle', 'square', 'letter')
+            use_color: Whether to use ANSI colors for better visibility
         """
         lines = []
 
+        # ANSI color codes
+        if use_color:
+            DIM = '\033[2m'       # Dim text for grid
+            BOLD = '\033[1m'      # Bold for stones
+            RESET = '\033[0m'     # Reset to normal
+            YELLOW = '\033[33m'   # For star points
+            BLUE = '\033[34m'     # For coordinates
+        else:
+            DIM = BOLD = RESET = YELLOW = BLUE = ''
+
         # Unicode characters for board drawing
-        # Box drawing characters
-        TOP_LEFT = '┌'
-        TOP_RIGHT = '┐'
-        BOTTOM_LEFT = '└'
-        BOTTOM_RIGHT = '┘'
-        HORIZONTAL = '─'
-        VERTICAL = '│'
-        CROSS = '┼'
-        T_DOWN = '┬'
-        T_UP = '┴'
-        T_RIGHT = '├'
-        T_LEFT = '┤'
+        # Box drawing characters (will be dimmed)
+        TOP_LEFT = f'{DIM}┌{RESET}'
+        TOP_RIGHT = f'{DIM}┐{RESET}'
+        BOTTOM_LEFT = f'{DIM}└{RESET}'
+        BOTTOM_RIGHT = f'{DIM}┘{RESET}'
+        HORIZONTAL = f'{DIM}─{RESET}'
+        VERTICAL = f'{DIM}│{RESET}'
+        CROSS = f'{DIM}┼{RESET}'
+        T_DOWN = f'{DIM}┬{RESET}'
+        T_UP = f'{DIM}┴{RESET}'
+        T_RIGHT = f'{DIM}├{RESET}'
+        T_LEFT = f'{DIM}┤{RESET}'
 
         # Stone characters - different styles available
         if stone_style == 'square':
-            BLACK_STONE = '■'  # Black square (U+25A0)
-            WHITE_STONE = '□'  # White square (U+25A1)
+            BLACK_STONE = f'{BOLD}■{RESET}'  # Black square (U+25A0)
+            WHITE_STONE = f'{BOLD}□{RESET}'  # White square (U+25A1)
         elif stone_style == 'letter':
-            BLACK_STONE = 'X'  # Simple X for black
-            WHITE_STONE = 'O'  # Simple O for white
+            BLACK_STONE = f'{BOLD}X{RESET}'  # Simple X for black
+            WHITE_STONE = f'{BOLD}O{RESET}'  # Simple O for white
         else:  # circle (default)
-            BLACK_STONE = '●'  # Filled circle (U+25CF)
-            WHITE_STONE = '○'  # White circle (U+25CB)
+            BLACK_STONE = f'{BOLD}●{RESET}'  # Filled circle (U+25CF)
+            WHITE_STONE = f'{BOLD}○{RESET}'  # White circle (U+25CB)
 
-        STAR_POINT = '╋'   # Works well for star points
+        STAR_POINT = f'{YELLOW}╋{RESET}'   # Star points in yellow for visibility
 
         # Column labels
         if show_coords:
-            col_labels = "    " + "  ".join(chr(ord('A') + i) if i < 8 else chr(ord('A') + i + 1)
+            col_labels = "    " + "  ".join(f"{BLUE}{chr(ord('A') + i) if i < 8 else chr(ord('A') + i + 1)}{RESET}"
                                           for i in range(self.size))
             lines.append(col_labels)
             lines.append("")  # Space between labels and board
@@ -352,7 +363,7 @@ class GoBoard:
             row_chars = []
 
             if show_coords:
-                row_chars.append(f"{row_num:2}  ")
+                row_chars.append(f"{BLUE}{row_num:2}{RESET}  ")
 
             for x in range(self.size):
                 stone = self.get(x, board_y)
@@ -389,10 +400,10 @@ class GoBoard:
 
                 # Add horizontal line between intersections (except after last)
                 if x < self.size - 1:
-                    row_chars.append(HORIZONTAL * 2)
+                    row_chars.append(HORIZONTAL + HORIZONTAL)
 
             if show_coords:
-                row_chars.append(f"  {row_num}")
+                row_chars.append(f"  {BLUE}{row_num}{RESET}")
 
             lines.append(''.join(row_chars))
 
